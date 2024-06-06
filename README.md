@@ -1,13 +1,11 @@
-## Go Concurrency
+# Go Concurrency
 
-Welcome to my brain dump covering Go concurrency patterns.
+This project discuss techniques building applications using Go concurrency.
 
-## Worker pool pattern
+## Topics
 
-A worker pool pattern using a combination of goroutine and channel.
+* [Concurrency Patterns](./docs/patterns.md)
 
-This [working example](./examples/worker/main.go) demonstrates the use of worker pool to build a fibonance sequence for a range of index using workers. To run the example, execute: `go run example/patterns/worker/main.go -seq=<sequence of fibonance> -workers=<number of workers>`.
+## Disclaimer
 
-## Observer pattern
-
-This [working example](./examples/pubsub/main.go) demonstrates an implementation of a pub sub (or listener) pattern using channels.
+The content in this project is intended for educational purpose only. It is constantly updated, items my be removed, and modified without warning.
