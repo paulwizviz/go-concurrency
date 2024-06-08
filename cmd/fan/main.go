@@ -8,10 +8,11 @@ import (
 	"os"
 	"strconv"
 	"strings"
+	"sync"
 	"time"
 )
 
-type data struct {
+type Data struct {
 	ID    int
 	Field string
 	Date  time.Time
@@ -65,7 +66,7 @@ func dateToTime(date string) (time.Time, error) {
 		return time.Time{}, err
 	}
 	mth := monthToInt(d[1])
-	day, _ := strconv.Atoi(d[0])
+	day, err := strconv.Atoi(d[0])
 	if err != nil {
 		return time.Time{}, err
 	}
@@ -75,8 +76,8 @@ func dateToTime(date string) (time.Time, error) {
 	return tm, nil
 }
 
-func parse(reader *csv.Reader) (c chan data) {
-	c = make(chan data)
+func parse(reader *csv.Reader) (c chan Data) {
+	c = make(chan Data)
 	go func() {
 	loop:
 		for {
@@ -93,7 +94,7 @@ func parse(reader *csv.Reader) (c chan data) {
 			if err != nil {
 				continue loop
 			}
-			d := data{
+			d := Data{
 				ID:    id,
 				Field: rec[1],
 				Date:  dt,
@@ -105,54 +106,86 @@ func parse(reader *csv.Reader) (c chan data) {
 	return
 }
 
-func filter(d chan data) (even chan data, odd chan data) {
-	even = make(chan data)
-	odd = make(chan data)
-	go func() {
-		for v := range d {
-			if v.ID%2 == 0 {
-				even <- v
-			} else {
-				odd <- v
-			}
-		}
-	}()
-	return
+const (
+	ClassOdd = iota + 1
+	ClassEven
+)
+
+type Classification struct {
+	Class int
+	Data
 }
 
-func count(even chan data, odd chan data) {
+func OddsEven(dc chan Data) chan Classification {
+	c := make(chan Classification)
 	go func() {
-		for v := range even {
-			fmt.Println(v)
+		for d := range dc {
+			if d.ID%2 == 0 {
+				c <- Classification{
+					Class: ClassEven,
+					Data:  d,
+				}
+			} else {
+				c <- Classification{
+					Class: ClassOdd,
+					Data:  d,
+				}
+			}
 		}
+		close(c)
 	}()
+	return c
+}
+
+func Printer(cs ...chan Classification) chan string {
+	result := make(chan string)
+	var wg sync.WaitGroup
+	wg.Add(len(cs))
+	for _, c := range cs {
+		go func(cc chan Classification) {
+			for c := range cc {
+				if c.Class == ClassOdd {
+					result <- fmt.Sprintf("Class: Odds Data: %v", c.Data)
+				} else {
+					result <- fmt.Sprintf("Class: Even Data: %v", c.Data)
+				}
+			}
+			wg.Done()
+		}(c)
+	}
 	go func() {
-		for v := range odd {
-			fmt.Println(v)
-		}
+		wg.Wait()
+		close(result)
 	}()
+	return result
 }
 
 func main() {
-
 	file, err := os.Open("./data.csv")
 	if err != nil {
 		log.Fatal(err)
 	}
-
 	reader := csv.NewReader(file)
 
+	// Extract items from CSV file and pass it through
+	// channel d
 	d := parse(reader)
-	even, odd := filter(d)
+
+	// Fan out
+	c1 := OddsEven(d)
+	c2 := OddsEven(d)
+
+	// Fan in
+	result := Printer(c1, c2)
+
+	// Final process
+	var wg sync.WaitGroup
+	wg.Add(1)
 	go func() {
-		for v := range even {
-			fmt.Println(v)
+		for r := range result {
+			fmt.Println(r)
 		}
+		wg.Done()
 	}()
-	go func() {
-		for v := range odd {
-			fmt.Println(v)
-		}
-	}()
-	time.Sleep(1 * time.Second)
+	wg.Wait()
 }
