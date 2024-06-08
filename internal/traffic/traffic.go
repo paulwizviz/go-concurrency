@@ -104,6 +104,7 @@ func (l *Lane[V]) Dequeue() {
 func (l *Lane[V]) Manage(v V, sig <-chan LightState) {
 	l.Enqueue(v)
 	s := <-sig
+	fmt.Println(s)
 	if s == LightGreen {
 		l.Dequeue()
 	}

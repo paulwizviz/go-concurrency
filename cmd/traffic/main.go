@@ -20,7 +20,7 @@ func main() {
 			ID: uint(i),
 		}
 		lane.Manage(c, s)
-		fmt.Println((<-s).String(), lane)
+		fmt.Println(lane)
 	}
 	c := make(chan os.Signal, 1)
 	signal.Notify(c, os.Interrupt)
