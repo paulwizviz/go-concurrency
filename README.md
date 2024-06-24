@@ -4,7 +4,9 @@ This project discuss techniques building applications using Go concurrency.
 
 ## Topics
 
-* [Concurrency Patterns](./docs/patterns.md)
+* Patterns
+    * [Fan Out and In](./docs/fan-out-in.md)
+    * [Asynchronous API](./docs/asynch.md)
 
 ## References
 
